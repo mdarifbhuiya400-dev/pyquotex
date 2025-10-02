@@ -1,44 +1,35 @@
-# .github/workflows/notify-telegram.yml
-
-name: Notify Telegram
+name: Quotex Telegram Alerts
 
 on:
   push:
     branches:
-      - master  # Notifica commits ou pushes na branch "master"
-  pull_request:
-    types: [opened, closed]
+      - master
+  workflow_dispatch:  # Manual trigger option
 
 jobs:
   notify-telegram:
     runs-on: ubuntu-24.04
 
     steps:
-      - name: Checkout do repositório
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Enviar notificação para o Telegram
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Send Telegram Notification
         run: |
-          escape_markdown() {
-            local input="$1"
-            echo "$input" | sed 's/[][\.*^$(){}?+|&]/\\&/g'
-          }
+          # Latest commit info
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          COMMIT_AUTHOR=$(git log -1 --pretty=%an)
+          REPO_NAME="${{ github.repository }}"
+          ESCAPED_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed 's/"/\\"/g')
 
-          if [ "${{ github.event_name }}" = "push" ]; then
-            COMMIT_MESSAGE=$(git log -1 --pretty=%B)
-            CLEAN_MESSAGE=$(echo "$COMMIT_MESSAGE" | sed 's/:[a-z_]*://g')
-            ESCAPED_MESSAGE=$(escape_markdown "$CLEAN_MESSAGE")
-            MESSAGE="📦 *New Push on Repository*\n\n🔧 Repository: ${{ github.repository }}\n👤 Actor: ${{ github.actor }}\n📝 Message Commit:\n${ESCAPED_MESSAGE}"
-          elif [ "${{ github.event_name }}" = "pull_request" ]; then
-            ACTION="${{ github.event.action }}"
-            PR_URL="${{ github.event.pull_request.html_url }}"
-            PR_TITLE="${{ github.event.pull_request.title }}"
-            MESSAGE="📌 *Pull Request ${ACTION}:*\n\n🔧 Repository: ${{ github.repository }}\n👤 Actor: ${{ github.actor }}\n📝 Title: ${PR_TITLE}\n🔗 [View PR](${PR_URL})"
-          fi
+          MESSAGE="📢 Quotex AI Update!\n\nRepository: $REPO_NAME\nAuthor: $COMMIT_AUTHOR\nCommit Message: $ESCAPED_MESSAGE"
 
-          curl -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
+          # Send Telegram message (Direct Token + Chat ID)
+          curl -s -X POST "https://api.telegram.org/bot8453457741:AAFLXRU15IlXLR5bFgAXzNzRQo6OeYfLYBo/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\": \"$TELEGRAM_CHAT_ID\", \"text\": \"$MESSAGE\", \"parse_mode\": \"Markdown\"}"
+            -d "{\"chat_id\": \"6439861365\", \"text\": \"$MESSAGE\", \"parse_mode\": \"Markdown\"}"
+
+      - name: Optional: Run Python Script
+        run: |
+          # Uncomment to run your Quotex AI script
+          # python3 quotex_ai_bot.py
